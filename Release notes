@@ -1,1 +1,2 @@
-changed the RGB contrast, for a more natural looking dark mode
+1. changed the RGB contrast, for a more natural looking dark mode
+2. Added a 500ms delay for toggles, in an attempt to midigate the risk of epileptic seizure due to glitches, stuck keys, or similar

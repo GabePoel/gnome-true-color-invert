@@ -4,7 +4,6 @@ const Main = imports.ui.main;
 const GLib = imports.gi.GLib;
 
 const System = imports.system;
-
 const ExtensionUtils = imports.misc.extensionUtils;
 const Self = ExtensionUtils.getCurrentExtension();
 
@@ -16,7 +15,7 @@ const TrueInvertWindowEffect = new GObject.registerClass({
 	vfunc_get_static_shader_source() {
 		return `
 			uniform bool invert_color;
-			uniform float opacity = 1.0;
+			uniform float opacity = 0.9;
 			uniform sampler2D tex;
 
 			/**
@@ -26,7 +25,7 @@ const TrueInvertWindowEffect = new GObject.registerClass({
 				vec4 c = texture2D(tex, cogl_tex_coord_in[0].st);
 
 				float white_bias = c.a * 0; // lower -> higher contrast
-				float m = 0.8 + white_bias;
+				float m = 1 + white_bias;
 				
 				float shift = white_bias + c.a - min(c.r, min(c.g, c.b)) - max(c.r, max(c.g, c.b));
 				
@@ -54,10 +53,17 @@ const TrueInvertWindowEffect = new GObject.registerClass({
 
 function InvertWindow() {
 	this.settings = ExtensionUtils.getSettings(Self.metadata["settings-schema"]);
+	this.last_toggle_time = 0;
 }
 
 InvertWindow.prototype = {
 	toggle_effect: function () {
+		let toggle_delay = 500
+		let now = GLib.get_monotonic_time() / 1000
+		if (now - this.last_toggle_time < toggle_delay){ /*Throttling the speed at which the user is allowed to toggle, in an attempt to prevent potential epeletical seizures*/
+			return;
+		}
+		this.last_toggle_time = now;
 		global.get_window_actors().forEach(function (actor) {
 			let meta_window = actor.get_meta_window();
 			if (meta_window.has_focus()) {
@@ -82,7 +88,7 @@ InvertWindow.prototype = {
 			this.settings,
 			Meta.KeyBindingFlags.NONE,
 			Shell.ActionMode.NORMAL,
-			this.toggle_effect
+			this.toggle_effect.bind(this)
 		);
 
 		global.get_window_actors().forEach(function (actor) {
@@ -105,7 +111,6 @@ InvertWindow.prototype = {
 
 let invert_window;
 
-
 function init() {
 }
 
@@ -119,4 +124,3 @@ function disable() {
 	invert_window.disable();
 	invert_window = null;
 }
-
