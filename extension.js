@@ -1,14 +1,15 @@
+const { Clutter, Meta, Shell, GObject, St } = imports.gi;
 const Main = imports.ui.main;
-const GObject = imports.gi.GObject;
-const Meta = imports.gi.Meta;
-const Shell = imports.gi.Shell;
-const Clutter = imports.gi.Clutter;
+
+const GLib = imports.gi.GLib;
+
+const System = imports.system;
 
 const ExtensionUtils = imports.misc.extensionUtils;
 const Self = ExtensionUtils.getCurrentExtension();
 
 const SHORTCUT = 'invert-window-shortcut';
-
+windowSignals = [];
 const TrueInvertWindowEffect = new GObject.registerClass({
 	Name: 'TrueInvertWindowEffect',
 }, class TrueInvertWindowEffect extends Clutter.ShaderEffect {
@@ -24,14 +25,14 @@ const TrueInvertWindowEffect = new GObject.registerClass({
 			void main() {
 				vec4 c = texture2D(tex, cogl_tex_coord_in[0].st);
 
-				float white_bias = c.a * 0.1; // lower -> higher contrast
-				float m = 1.0 + white_bias;
+				float white_bias = c.a * 0; // lower -> higher contrast
+				float m = 0.8 + white_bias;
 				
 				float shift = white_bias + c.a - min(c.r, min(c.g, c.b)) - max(c.r, max(c.g, c.b));
 				
-				c = vec4((shift + c.r) / m, 
-						(shift + c.g) / m, 
-						(shift + c.b) / m, 
+				c = vec4((shift + c.r + 0.1) / m, 
+						(shift + c.g + 0.1) / m, 
+						(shift + c.b + 0.1) / m, 
 						c.a);
 
 				cogl_color_out = c;
@@ -62,11 +63,13 @@ InvertWindow.prototype = {
 			if (meta_window.has_focus()) {
 				if (actor.get_effect('invert-color')) {
 					actor.remove_effect_by_name('invert-color');
+					actor.set_shadow_type(Meta.ShadowType.NORMAL);
 					delete meta_window._invert_window_tag;
 				}
 				else {
 					let effect = new TrueInvertWindowEffect();
 					actor.add_effect_with_name('invert-color', effect);
+					actor.set_shadow_type(Meta.ShadowType.NONE);
 					meta_window._invert_window_tag = true;
 				}
 			}
@@ -102,6 +105,7 @@ InvertWindow.prototype = {
 
 let invert_window;
 
+
 function init() {
 }
 
@@ -109,6 +113,7 @@ function enable() {
 	invert_window = new InvertWindow();
 	invert_window.enable();
 }
+
 
 function disable() {
 	invert_window.disable();
