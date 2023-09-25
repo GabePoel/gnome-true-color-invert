@@ -18,6 +18,7 @@ https://extensions.gnome.org/extension/5829/true-color-invert/
 - Gnome 42
 - Gnome 43
 - Gnome 44
+- Gnome 45 (Experimental | Untested)
 
 Deprecated versions should work, but will not be supported nor will they recieve any further updates.
 
