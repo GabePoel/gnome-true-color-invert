@@ -4,14 +4,7 @@
   "name": "True Color Window Invert",
   "settings-schema": "org.gnome.shell.extensions.true-color-window-invert",
   "shell-version": [
-    "3.32",
-    "3.36",
-    "3.38",
-    "40",
-    "41",
-    "42", 
-    "43", 
-    "44"
+    "45"
   ],
   "url": "https://github.com/Lynet101/gnome-true-color-invert",
   "uuid": "true-color-window-invert@lynet101",
