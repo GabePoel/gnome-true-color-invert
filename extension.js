@@ -1,21 +1,21 @@
-const { Clutter, Meta, Shell, GObject, St } = imports.gi;
 const Main = imports.ui.main;
+const GObject = imports.gi.GObject;
+const Meta = imports.gi.Meta;
+const Shell = imports.gi.Shell;
+const Clutter = imports.gi.Clutter;
 
-const GLib = imports.gi.GLib;
-
-const System = imports.system;
 const ExtensionUtils = imports.misc.extensionUtils;
 const Self = ExtensionUtils.getCurrentExtension();
 
 const SHORTCUT = 'invert-window-shortcut';
-windowSignals = [];
-const TrueInvertWindowEffect = new GObject.registerClass({
+
+const TrueInvertWindowEffect = GObject.registerClass({
 	Name: 'TrueInvertWindowEffect',
 }, class TrueInvertWindowEffect extends Clutter.ShaderEffect {
 	vfunc_get_static_shader_source() {
 		return `
 			uniform bool invert_color;
-			uniform float opacity = 0.9;
+			uniform float opacity = 1.0;
 			uniform sampler2D tex;
 
 			/**
@@ -24,14 +24,14 @@ const TrueInvertWindowEffect = new GObject.registerClass({
 			void main() {
 				vec4 c = texture2D(tex, cogl_tex_coord_in[0].st);
 
-				float white_bias = c.a * 0; // lower -> higher contrast
-				float m = 1 + white_bias;
+				float white_bias = c.a * 0.1; // lower -> higher contrast
+				float m = 1.0 + white_bias;
 				
 				float shift = white_bias + c.a - min(c.r, min(c.g, c.b)) - max(c.r, max(c.g, c.b));
 				
-				c = vec4((shift + c.r + 0.1) / m, 
-						(shift + c.g + 0.1) / m, 
-						(shift + c.b + 0.1) / m, 
+				c = vec4((shift + c.r) / m, 
+						(shift + c.g) / m, 
+						(shift + c.b) / m, 
 						c.a);
 
 				cogl_color_out = c;
@@ -51,38 +51,29 @@ const TrueInvertWindowEffect = new GObject.registerClass({
 	}
 });
 
-function InvertWindow() {
-	this.settings = ExtensionUtils.getSettings(Self.metadata["settings-schema"]);
-	this.last_toggle_time = 0;
-}
+var InvertWindow = class {
+	constructor() {
+		this.settings = ExtensionUtils.getSettings(Self.metadata["settings-schema"]);
+	}
 
-InvertWindow.prototype = {
-	toggle_effect: function () {
-		let toggle_delay = 500
-		let now = GLib.get_monotonic_time() / 1000
-		if (now - this.last_toggle_time < toggle_delay){ /*Throttling the speed at which the user is allowed to toggle, in an attempt to prevent potential epeletical seizures*/
-			return;
-		}
-		this.last_toggle_time = now;
-		global.get_window_actors().forEach(function (actor) {
+	toggle_effect() {
+		global.get_window_actors().forEach((actor) => {
 			let meta_window = actor.get_meta_window();
 			if (meta_window.has_focus()) {
 				if (actor.get_effect('invert-color')) {
 					actor.remove_effect_by_name('invert-color');
-					actor.set_shadow_type(Meta.ShadowType.NORMAL);
 					delete meta_window._invert_window_tag;
 				}
 				else {
 					let effect = new TrueInvertWindowEffect();
 					actor.add_effect_with_name('invert-color', effect);
-					actor.set_shadow_type(Meta.ShadowType.NONE);
 					meta_window._invert_window_tag = true;
 				}
 			}
-		}, this);
-	},
+		});
+	}
 
-	enable: function () {
+	enable() {
 		Main.wm.addKeybinding(
 			SHORTCUT,
 			this.settings,
@@ -91,21 +82,21 @@ InvertWindow.prototype = {
 			this.toggle_effect.bind(this)
 		);
 
-		global.get_window_actors().forEach(function (actor) {
+		global.get_window_actors().forEach((actor) => {
 			let meta_window = actor.get_meta_window();
 			if (meta_window.hasOwnProperty('_invert_window_tag')) {
 				let effect = new TrueInvertWindowEffect();
 				actor.add_effect_with_name('invert-color', effect);
 			}
-		}, this);
-	},
+		});
+	}
 
-	disable: function () {
+	disable() {
 		Main.wm.removeKeybinding(SHORTCUT);
 
-		global.get_window_actors().forEach(function (actor) {
+		global.get_window_actors().forEach((actor) => {
 			actor.remove_effect_by_name('invert-color');
-		}, this);
+		});
 	}
 };
 
@@ -118,7 +109,6 @@ function enable() {
 	invert_window = new InvertWindow();
 	invert_window.enable();
 }
-
 
 function disable() {
 	invert_window.disable();
